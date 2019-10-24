@@ -12,7 +12,7 @@ TODO:
 -------------------
 SAMPLE:
 Input map:
-!(map_large.jpg)[input map]
+![input map](map_large.jpg)[input map]
 
 Resulting scene:
-!(raycaster_demo_untextured.gif)[Sample Scene]
+![Sample Scene](raycaster_demo_untextured.gif)[Sample Scene]
