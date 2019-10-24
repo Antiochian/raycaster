@@ -15,4 +15,4 @@ Input map:
 ![map_large.jpg](input map)
 
 Resulting scene:
-![raycaster
+![raycaster_demo_untextured.gif](Sample Scene)
