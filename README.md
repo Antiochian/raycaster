@@ -1,9 +1,8 @@
 # raycaster
-1990s-style 3D graphics engine supporting grid-based wall geometry.
-Can "read" any coloured image as interpret it as a map (white pixels are empty space)
+1990s-style 3D graphics engine supporting grid-based wall geometry and featuring mouselook FPS controls.
+Draw an image in msPaint and the program will convert it to a map automatically! (white pixels are read as empty space)
 
 TODO:
-- Add mouselook
 - Add texture mapping
 - Add collision detection
 - Add jumping, crouching, flying
