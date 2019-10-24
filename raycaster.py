@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Oct 22 17:54:16 2019
-
-@author: user
+DOOM-like RAYTRACER
+@author: Antiochian
 -------
 CONTROLS:
+Esc to quit
 WSAD for movement
-Q/E for rotating
-<todo: add mouselook>
+use the mouse to look around (or use Q and E to rotate view)
 
+You can edit the map file in MSpaint, and white pixels will be treated as empty space
 -------
 SIGN CONVENTION:
     
@@ -18,6 +19,8 @@ SIGN CONVENTION:
 |
 v
 +y direction
+
+theta is measured backwards kinda, so that a theta of +90deg points in the NEGATIVE y-direction
 """
 import pygame
 import sys
@@ -267,30 +270,27 @@ def main():
         projx = 0 #possible error here if screen index starts at 1 or 0
         
         for event in pygame.event.get(): #detect events
-            if event.type == pygame.QUIT: #detect attempted exit
+            if event.type == pygame.QUIT or pygame.key.get_pressed()[27]: #detect attempted exit
                 pygame.quit()
                 sys.exit()
-        if pygame.key.get_pressed()[101]:
+        viewangle += looksensitivity*pygame.mouse.get_rel()[0]
+        
+        if pygame.key.get_pressed()[101]: #rotate with E
             viewangle += turnspeed
-#            print("-----",viewangle,"degrees --------")
-#            test((Px,Py),viewangle)
-        if pygame.key.get_pressed()[113]:
+        if pygame.key.get_pressed()[113]: #rotate with Q
             viewangle -= turnspeed
-#            print("-----",viewangle,"degrees --------")
-#            test((Px,Py),viewangle)
         if pygame.key.get_pressed()[119]: # Go FORWARD
-#            print("forward")
             Px += speed*cos(radians(viewangle))
             Py += speed*sin(radians(viewangle))
         if pygame.key.get_pressed()[115]: #Go BACKWARD
             Px -= speed*cos(radians(viewangle))
             Py -= speed*sin(radians(viewangle))
         if pygame.key.get_pressed()[100]: #Strafe RIGHT
-            Px -= 0.8*speed*sin(radians(viewangle))
-            Py += 0.8*speed*cos(radians(viewangle))
+            Px -= speed*sin(radians(viewangle))
+            Py += speed*cos(radians(viewangle))
         if pygame.key.get_pressed()[97]: #Strafe LEFT
-            Px += 0.8*speed*sin(radians(viewangle))
-            Py -= 0.8*speed*cos(radians(viewangle))
+            Px += speed*sin(radians(viewangle))
+            Py -= speed*cos(radians(viewangle))
         
         angle = viewangle - FOV/2
         for projx in range(projwidth):
@@ -317,6 +317,7 @@ clock = pygame.time.Clock()
 
 speed = 25
 turnspeed = 8
+looksensitivity = 3/8
 FPS = 12
 gridsize = 32
 FOV = 60 #degrees
@@ -330,12 +331,12 @@ columnangle = FOV/projwidth #in degrees! # angle between rays/columns
 
 # set up surfaces
 window = pygame.display.set_mode( (Nx,Ny) )
-pygame.display.set_caption("Raycaster v3")
+pygame.display.set_caption("Raycaster v3.5 - Press Esc To Quit...")
 PROJ = pygame.Surface( (Nx,Ny))
+pygame.event.set_grab(True)
+pygame.mouse.set_visible(False)
 
 main()
-#test((192,288),180)
 
-    
     
     
