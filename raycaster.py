@@ -2,9 +2,13 @@
 """
 Created on Tue Oct 22 17:54:16 2019
 
-v3.0
-STILL VERY MUCH IN-PROGRESS!!
-@author: Antiochian
+@author: user
+-------
+CONTROLS:
+WSAD for movement
+Q/E for rotating
+<todo: add mouselook>
+
 -------
 SIGN CONVENTION:
     
@@ -14,18 +18,54 @@ SIGN CONVENTION:
 |
 v
 +y direction
-
-theta is measured backwards kinda, so that a theta of +90deg points in the NEGATIVE y-direction
 """
 import pygame
 import sys
+import os
 from math import *
 import numpy as np
+from matplotlib.image import imread
 
-def gridmaker():
-    """
-    Called at the start of program, defines the "walldict" dictionary of coordinates
-    """
+black = (0,0,0)
+white = (255,255,255)
+red = (255,0,0)
+blue = (0,0,255)
+green = (0,0,255)
+debug = (255, 107, 223)
+grey = (20,20,20)
+lightgrey = (191, 217, 198)
+
+floorcolor = grey
+roofcolor = lightgrey
+debugcolor = debug
+backgroundcolor = black
+
+def importgrid():
+    grid_dict = {}
+    grid = imread('map.jpg')
+    grid = np.rint(grid)
+    
+    #detect alpha channel
+    if grid.shape[2] == 4:
+        for x in range( grid.shape[1]):
+            for y in range(grid.shape[0]):
+                if all( grid[y,x] == [255,255,255,255]):
+                    pass
+                else:
+                    grid_dict[(x,y)] = grid[y,x]
+    elif grid.shape[2] == 3:
+        for y in range(grid.shape[0]):
+                if all( grid[y,x] == [255,255,255]):
+                    pass
+                else:
+                    grid_dict[(x,y)] = grid[y,x]
+    return grid_dict,grid
+
+def gridmaker(): 
+    #Import map file if possible
+    if os.path.exists('map.jpg'):
+        return importgrid()
+    #make default map
     grid_dict = {}
     
     spacr=grid = np.array([["A","A","A", "A","A","A", "A","A","A"]]) #"spacr" variable is just to keep matrix lined up.
@@ -170,18 +210,24 @@ def drawwall(Wx,Wy,dist,projx):
     Wy = Wy // gridsize
     
     if abs(Wx) > len(grid) or abs(Wy) > len(grid):
-        color = backgroundcolor #Out of bounds case
+        newcolor = backgroundcolor #Out of bounds case
+        height = 2
     else:
+        m,K = 500,500
+        shader = 1/(exp((dist - m) / K  )  + 1) #falloff effect
         color = walldict[(Wx,Wy)]
-    
-    height = gridsize*projdistance / dist
+        newcolor = (int(shader*color[0]),int(shader*color[1]),int(shader*color[2]))
+        height = 60*projdistance / dist
     offset =( Ny - height )/2
     colRect = pygame.Rect(projx,offset, 1,height) #1pixel thick rectangle spanning whole screen
-    pygame.draw.rect(PROJ, color, colRect)
+    pygame.draw.rect(PROJ, newcolor, colRect)
     return
     
     
 def test(playerpos, angle):
+    """
+    Test function used for debugging
+    """
     print("Test initiated. (Px,Py) = ",playerpos," ; angle = ",angle)
     angle = angle % 360
     (Px,Py) = playerpos
@@ -215,7 +261,8 @@ def main():
     while True: #MAIN GAME LOOP#
         clock.tick(FPS)
         window.blit(PROJ,(0,0))
-        PROJ.fill(backgroundcolor)
+        PROJ.fill(floorcolor) #fill screen with floor color
+        pygame.draw.rect(PROJ, roofcolor, (0,int(Ny/2),Nx,int(Ny/2)) )
         pygame.display.update()
         projx = 0 #possible error here if screen index starts at 1 or 0
         
@@ -225,41 +272,31 @@ def main():
                 sys.exit()
         if pygame.key.get_pressed()[101]:
             viewangle += turnspeed
-            print("-----",viewangle,"degrees --------")
-            test((Px,Py),viewangle)
+#            print("-----",viewangle,"degrees --------")
+#            test((Px,Py),viewangle)
         if pygame.key.get_pressed()[113]:
             viewangle -= turnspeed
-            print("-----",viewangle,"degrees --------")
-            test((Px,Py),viewangle)
+#            print("-----",viewangle,"degrees --------")
+#            test((Px,Py),viewangle)
         if pygame.key.get_pressed()[119]: # Go FORWARD
-            print("forward")
+#            print("forward")
             Px += speed*cos(radians(viewangle))
             Py += speed*sin(radians(viewangle))
         if pygame.key.get_pressed()[115]: #Go BACKWARD
             Px -= speed*cos(radians(viewangle))
             Py -= speed*sin(radians(viewangle))
         if pygame.key.get_pressed()[100]: #Strafe RIGHT
-            Px += 0.6*speed*sin(radians(viewangle))
-            Py += 0.6*speed*cos(radians(viewangle))
+            Px -= 0.8*speed*sin(radians(viewangle))
+            Py += 0.8*speed*cos(radians(viewangle))
         if pygame.key.get_pressed()[97]: #Strafe LEFT
-            Px -= 0.6*speed*sin(radians(viewangle))
-            Py -= 0.6*speed*cos(radians(viewangle))
+            Px += 0.8*speed*sin(radians(viewangle))
+            Py -= 0.8*speed*cos(radians(viewangle))
+        
         angle = viewangle - FOV/2
         for projx in range(projwidth):
             Ax, Ay , dAx, dAy, Bx, By , dBx, dBy = getintercepts( (Px,Py) , angle)  
             nocollision = True
-            L = 0
             while nocollision:
-                L += 1
-#                if L > len(grid):
-#                    print("--- #",L,"------")
-#                    print("Angle: ",angle)
-#                    print(Ax,Ay)
-#                    print(Bx,By)
-#                if round(angle,1) == viewangle:
-#                    print("-----",angle,"-----")
-#                    print(Ax,Ay)
-#                    print(Bx,By)    
                 distA = sqrt((Px-Ax)**2 + (Py-Ay)**2)
                 distB = sqrt((Px-Bx)**2 + (Py-By)**2)
                 if distA <= distB: #if A comes first
@@ -273,31 +310,15 @@ def main():
                         drawwall(Bx,By,distB,projx)
                         nocollision = False
                     Bx += dBx
-                    By += dBy                    
-                            
+                    By += dBy                                  
             angle += columnangle
     
-black = (0,0,0)
-white = (255,255,255)
-red = (255,0,0)
-blue = (0,0,255)
-green = (0,0,255)
-debug = (255, 107, 223)
-grey = (20,20,20)
 clock = pygame.time.Clock()
-topcolor = white
-rightcolor = black
-leftcolor = red
-bottomcolor = blue
-barriercolor = debug
-wallcolor = white
-backgroundcolor = grey
-debugcolor = debug
 
 speed = 25
 turnspeed = 8
 FPS = 12
-gridsize = 64
+gridsize = 32
 FOV = 60 #degrees
 Nx,Ny = 600,480
 walldict, grid = gridmaker()  
@@ -313,6 +334,7 @@ pygame.display.set_caption("Raycaster v3")
 PROJ = pygame.Surface( (Nx,Ny))
 
 main()
+#test((192,288),180)
 
     
     
