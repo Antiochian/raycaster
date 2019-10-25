@@ -16,7 +16,5 @@ SAMPLE:
 Input map:
 ![input map](map_large.png)
 
-Resulting scene:
 ![Sample Scene](raycaster_demo_untextured.gif)
-Shooting Gallery:
 ![Shooting Gallery](shooting_gallery.gif)
