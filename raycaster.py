@@ -208,6 +208,25 @@ def getintercepts( playerpos , angle ):
         dBy = dBx * -tan(radians(360 - angle))
     return Ax, Ay , dAx, dAy, Bx, By , dBx, dBy
 
+def raycast(Px , Py , angle, projx):
+    Ax, Ay , dAx, dAy, Bx, By , dBx, dBy = getintercepts( (Px,Py) , angle)
+    nocollision = True
+    while nocollision:
+        distA = sqrt((Px-Ax)**2 + (Py-Ay)**2)
+        distB = sqrt((Px-Bx)**2 + (Py-By)**2)
+        if distA <= distB: #if A comes first
+            if checkwall(Ax,Ay):
+                return(Ax,Ay,distA)
+                nocollision = False
+            Ax += dAx
+            Ay += dAy
+        else:
+            if checkwall(Bx,By):
+                return(Bx,By,distB)
+                nocollision = False
+            Bx += dBx
+            By += dBy
+            
 def drawwall(Wx,Wy,dist,projx):
     #takes raw coordinates as inputs
     Wx = Wx // gridsize
@@ -217,7 +236,7 @@ def drawwall(Wx,Wy,dist,projx):
         newcolor = backgroundcolor #Out of bounds case
         height = 2
     else:
-        m,K = 500,500
+        m,K = 500,700
         shader = 1/(exp((dist - m) / K  )  + 1) #falloff effect
         color = walldict[(Wx,Wy)]
         newcolor = (int(shader*color[0]),int(shader*color[1]),int(shader*color[2]))
@@ -292,34 +311,27 @@ def main():
         if pygame.key.get_pressed()[97]: #Strafe LEFT
             Px += speed*sin(radians(viewangle))
             Py -= speed*cos(radians(viewangle))
+        if pygame.key.get_pressed()[32] or pygame.mouse.get_pressed()[0]: #SHOOT GUN
+            PROJ.fill(white) #fill screen with floor color
+            pygame.display.update()
+            targetx,targety,disttarget = raycast(Px, Py ,viewangle, projx)
+            tx = targetx // gridsize
+            ty = targety // gridsize
+            if (tx,ty) in walldict.keys():
+                del walldict[(tx,ty)]
         
         angle = viewangle - FOV/2
         for projx in range(projwidth):
-            Ax, Ay , dAx, dAy, Bx, By , dBx, dBy = getintercepts( (Px,Py) , angle)  
-            nocollision = True
-            while nocollision:
-                distA = sqrt((Px-Ax)**2 + (Py-Ay)**2)
-                distB = sqrt((Px-Bx)**2 + (Py-By)**2)
-                if distA <= distB: #if A comes first
-                    if checkwall(Ax,Ay):
-                        drawwall(Ax,Ay,distA,projx)
-                        nocollision = False
-                    Ax += dAx
-                    Ay += dAy
-                else:
-                    if checkwall(Bx,By):
-                        drawwall(Bx,By,distB,projx)
-                        nocollision = False
-                    Bx += dBx
-                    By += dBy                                  
-            angle += columnangle
-    
+            Wx,Wy,distW = raycast(Px, Py ,angle, projx)
+            drawwall(Wx,Wy, distW, projx)
+            angle += columnangle                                  
+
 clock = pygame.time.Clock()
 
-speed = 25
+FPS = 64
+speed = 800/FPS
 turnspeed = 8
-looksensitivity = 3/8
-FPS = 12
+looksensitivity = 180/Nx #this is calibrated so one screen = 1 half turn 
 gridsize = 32
 FOV = 60 #degrees
 Nx,Ny = 600,480
