@@ -8,6 +8,7 @@ CONTROLS:
 Esc to quit
 WSAD for movement
 use the mouse to look around (or use Q and E to rotate view)
+Press leftclick or space to "shoot" and destroy walls
 
 You can edit the map file in MSpaint, and white pixels will be treated as empty space
 -------
