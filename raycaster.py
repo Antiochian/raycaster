@@ -12,6 +12,7 @@ Press leftclick or space to "shoot" and destroy walls
 
 You can edit the map file in MSpaint, and white pixels will be treated as empty space
 -------
+-------
 SIGN CONVENTION:
     
 +---------> +x direction
@@ -20,6 +21,8 @@ SIGN CONVENTION:
 |
 v
 +y direction
+
+theta is measured backwards kinda, so that a theta of +90deg points in the NEGATIVE y-direction
 """
 import pygame
 import sys
@@ -43,12 +46,6 @@ debugcolor = debug
 backgroundcolor = black
 
 def importgrid():
-    """
-    This function creates a dictionary containing the information 
-    associated with every "wall", with the coordinates being that 
-    dictionary entry's key. At the moment the only information stored
-    is the RGB colour value of said wall.
-    """
     grid_dict = {}
     grid = imread('map.jpg')
     grid = np.rint(grid)
@@ -69,18 +66,14 @@ def importgrid():
                     grid_dict[(x,y)] = grid[y,x]
     return grid_dict,grid
 
-def gridmaker():
-    """
-    This function sets up a default manual map if no import file is detected.
-    """
+def gridmaker(): 
     #Import map file if possible
     if os.path.exists('map.jpg'):
         return importgrid()
     #make default map
     grid_dict = {}
     
-    #I make the grid in this inefficient way purely for code readability/to help with debugging
-    spacr=grid = np.array([["A","A","A", "A","A","A", "A","A","A"]]) #"spacr" variable is just to keep matrix lined up.
+    grid =       np.array([["A","A","A", "A","A","A", "A","A","A"]]) #"spacr" variable is just to keep matrix lined up.
     grid = np.append(grid,[["X", 0 , 0 ,  0 , 0 , 0 ,  0 , 0, "B"]],axis = 0)
     grid = np.append(grid,[["X", 0 , 0 ,  0 , 0 , 0 ,  0 , 0 ,"B"]],axis = 0)
     ########################--------------------------------------##########
@@ -91,6 +84,7 @@ def gridmaker():
     grid = np.append(grid,[["X", 0 , 0 ,  0 , 0 , 0 ,  0 , 0, "B"]],axis = 0)
     grid = np.append(grid,[["X", 0 , 0 ,  0 , 0 , 0 ,  0 , 0, "B"]],axis = 0)
     grid = np.append(grid,[["Z","Z","Z", "Z","Z","Z", "Z","Z","Z"]],axis = 0)
+    #grid = np.flipud(grid)
     
     for x in range( grid.shape[1]):
         for y in range(grid.shape[0]):
@@ -122,7 +116,7 @@ def checkwall(x,y,GRID=False):
         return False
 
 def lookup(angle): #returns true if looking up
-    # NOTE: "up" means in positive y-direction, i.e. down on visual grid (computer graphics sign convention)
+    # NOTE: "up" means in positive y-direction, i.e. down on visual grid
     angle = angle % 360
     if 0 < angle < 180:
         return True
@@ -136,86 +130,86 @@ def lookright(angle):
     else:
         return False
     
-def getintercepts( playerpos , angle ):
-    """ input angle and position, returns Ax, Ay, Bx, By"""
+def getintercepts( playerpos , angle ): 
     (Px,Py) = playerpos
     angle = angle % 360
+    """ input angle and position, returns Ax, Ay, Bx, By
+"""
     if lookup(angle) and lookright(angle):
-        """FIRST QUADRANT 0 <= angle < 90"""
+        """FIRST QUADRANT 0 <= angle < 90
+        """
         if angle == 0:
             angle += 1e-8 #this fuzz prevents divide-by-zero errors  
-        #HORIZONTAL INTERSECTS
         Ay = (Py // gridsize + 1 ) * gridsize #next horizontal line
         Ax = Px + (Ay - Py)/tan(radians(angle))
         
         dAy = gridsize
         dAx = dAy / tan(radians( angle))
         
-        #VERTICAL INTERSECTS
-        Bx = (Px // gridsize + 1 ) * gridsize #next vert line
+        Bx = (Px // gridsize + 1 ) * gridsize
         By = Py + (Bx - Px)*tan(radians(angle)) 
         
         dBx = gridsize
         dBy = dBx * tan(radians(angle))       
     elif lookup(angle) and (not lookright(angle)):
-        """ SECOND QUADRANT 90 < angle < 180 """
+        """OPTION B:
+    ray is in 2nd quadrant: angle: 90 < angle < 180
+     X   |   """
         if angle == 180:
             angle -= 1e-8
-        #HORIZONTAL INTERSECTS
         Ay = (Py // gridsize + 1 ) * gridsize #Ay > Py
-        Ax = Px - (Ay - Py)/tan(radians(180 - angle))
+        Ax = Px - (Ay - Py)/tan(radians(180 - angle)) #Ax < Px
         
         dAy = gridsize #positive
         dAx = - dAy / tan(radians(180 - angle)) #negative     
         
         #VERTICAL INTERSECTS
         Bx = (Px // gridsize)*gridsize - 1 #prev vert line
-        By = Py +  abs((Bx - Px)*tan(radians(180 - angle)))
+        By = Py +  abs((Bx - Px)*tan(radians(180 - angle))) #By > Py
         
         dBx = -gridsize #negative
-        dBy = dBx * - tan(radians(180 - angle))  
+        dBy = dBx * - tan(radians(180 - angle)) #positive ; minus sign is to keep Y increasing   
     elif (not lookup(angle) ) and (not lookright(angle)):
-        """ THIRD QUADRANT: 180 <= angle < 270 """
+        """        
+    OPTION C:
+    ray is in 3rd quadrant, angle: 180 < 270
+         """
         if angle == 180:
-            angle += 1e8 #fuzz angle to avoid divide-by-zero errors
-        #HORIZONTAL INTERSECTS
+            angle += 1e8
         Ay = (Py // gridsize ) * gridsize - 1 #prev horizontal line
-        Ax = Px + (Ay - Py)/tan(radians(angle - 180))
+        Ax = Px + (Ay - Py)/tan(radians(angle - 180)) #note (Ay - Py) is negative
         
         dAy = -gridsize #negative
-        dAx = dAy /tan(radians(angle - 180))     
+        dAx = dAy /tan(radians(angle - 180)) #negative     
         
         #VERTICAL INTERSECTS
         Bx = (Px // gridsize)*gridsize - 1 #prev vert line
-        By = Py + (Bx - Px)*tan(radians(angle - 180))
+        By = Py + (Bx - Px)*tan(radians(angle - 180)) #minus sign is from tangent
         
         dBx = -gridsize #negative
-        dBy = dBx*tan(radians(angle - 180))
+        dBy = dBx*tan(radians(angle - 180)) #negative
    
     elif (not lookup(angle) ) and lookright(angle):                
-        """ 4TH QUADRANT: 270 < angle <= 360    ray is in 4th quadrant
+        """        
+    OPTION D:
+    ray is in 4th quadrant
          """     
         if angle == 360:
-            angle -= 1e-8 #fuzz angle to avoid divide-by-zero errors
+            angle -= 1e-8 #this fuzz prevents divide-by-zero errors  
         Ay = (Py // gridsize) * gridsize - 1 #prev horizontal line
-        Ax = Px + abs((Ay - Py)/tan(radians(360 - angle)))
+        Ax = Px + abs((Ay - Py)/tan(radians(360 - angle))) #this minus sign is from the tangent 
         
         dAy = -gridsize
         dAx = dAy / -tan(radians(360 - angle)) #positive
         
-        #VERTICAL INTERSECTS
-        Bx = (Px // gridsize + 1 ) * gridsize #next vert line
-        By = Py - (Bx - Px)*tan(radians(360 - angle))
+        Bx = (Px // gridsize + 1 ) * gridsize #increasing
+        By = Py - (Bx - Px)*tan(radians(360 - angle)) #decreasing
         
         dBx = gridsize
         dBy = dBx * -tan(radians(360 - angle))
     return Ax, Ay , dAx, dAy, Bx, By , dBx, dBy
 
 def raycast(Px , Py , angle, projx):
-    """
-    This function does the actual raycasting, and keeps searching until a collision is found
-    Then it returns the distance to collision and the collision coordinates
-    """
     Ax, Ay , dAx, dAy, Bx, By , dBx, dBy = getintercepts( (Px,Py) , angle)
     nocollision = True
     while nocollision:
@@ -235,10 +229,7 @@ def raycast(Px , Py , angle, projx):
             By += dBy
             
 def drawwall(Wx,Wy,dist,projx):
-    """
-    Draws wall-slice on screen
-    """
-    #takes raw coordinates as inputs, here converts them to grid-coords
+    #takes raw coordinates as inputs
     Wx = Wx // gridsize
     Wy = Wy // gridsize
     
@@ -287,12 +278,35 @@ def test(playerpos, angle):
             By += dBy  
     return
 
+def applydrag(vel_x,vel_y,vel_z=None):
+    speedsquared = vel_x**2 + vel_y**2   
+    speed = sqrt(vel_x**2 + vel_y**2)
+    if abs(vel_x) and abs(vel_y) > max_speed:
+        return max_speed*np.sign(vel_x),max_speed*np.sign(vel_y),vel_z
+    elif abs(vel_x) > max_speed:
+        return max_speed*np.sign(vel_x),vel_y,vel_z
+    elif abs(vel_y) > max_speed:
+        return vel_x,max_speed*np.sign(vel_y),vel_z
+    totaldrag =  dragcoeff*speedsquared
+    if speed == 0:
+        return vel_x, vel_y, vel_z 
+    xdragaccel = -np.sign(vel_x)*abs(totaldrag * vel_x/speed)                  #split drag component-wise
+    ydragaccel = -np.sign(vel_y)*abs(totaldrag * vel_y/ speed)
+    vel_x += xdragaccel
+    vel_y += ydragaccel
+    if vel_z != None:
+        zdragaccel = -9.81
+        vel_z += zdragaccel
+    return vel_x, vel_y,vel_z
+
 def main():
-    (Px,Py) = (193,193) #Default starting position (arbritary)
-    #<TODO> Implement check to make sure player doesn't start inside a wall and move spawn point if necessary
+    (Px,Py) = (193,193)
     viewangle = -15
     clock = pygame.time.Clock()
-    while True: #MAIN GAME LOOP
+    vel_x = 0
+    vel_y = 0
+    vel_z = None
+    while True: #MAIN GAME LOOP#
         clock.tick(FPS)
         window.blit(PROJ,(0,0))
         PROJ.fill(floorcolor) #fill screen with floor color
@@ -304,25 +318,37 @@ def main():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[27]: #detect attempted exit
                 pygame.quit()
                 sys.exit()
-        #mouselook feature
         viewangle += looksensitivity*pygame.mouse.get_rel()[0]
         
-        if pygame.key.get_pressed()[101]: #rotate view right with E
+
+        if pygame.key.get_pressed()[101]: #rotate with E
             viewangle += turnspeed
-        if pygame.key.get_pressed()[113]: #rotate  view left with Q
+        if pygame.key.get_pressed()[113]: #rotate with Q
             viewangle -= turnspeed
         if pygame.key.get_pressed()[119]: # Go FORWARD
-            Px += speed*cos(radians(viewangle))
-            Py += speed*sin(radians(viewangle))
+            vel_x += speed*cos(radians(viewangle))
+            vel_y += speed*sin(radians(viewangle))
         if pygame.key.get_pressed()[115]: #Go BACKWARD
-            Px -= speed*cos(radians(viewangle))
-            Py -= speed*sin(radians(viewangle))
+            vel_x -= speed*cos(radians(viewangle))
+            vel_y -= speed*sin(radians(viewangle))
         if pygame.key.get_pressed()[100]: #Strafe RIGHT
-            Px -= speed*sin(radians(viewangle))
-            Py += speed*cos(radians(viewangle))
+            vel_x -= speed*sin(radians(viewangle))
+            vel_y += speed*cos(radians(viewangle))
         if pygame.key.get_pressed()[97]: #Strafe LEFT
-            Px += speed*sin(radians(viewangle))
-            Py -= speed*cos(radians(viewangle))
+            vel_x += speed*sin(radians(viewangle))
+            vel_y -= speed*cos(radians(viewangle))
+        
+        vel_x,vel_y,vel_z = applydrag(vel_x,vel_y,vel_z)
+        #vel_x,vel_y = degradevelocity(vel_x,vel_y)
+        nextPx = Px + vel_x
+        nextPy = Py + vel_y
+        if checkwall(nextPx,nextPy):
+            vel_x = 0
+            vel_y = 0
+        else:
+            Px = nextPx
+            Py = nextPy
+                
         if pygame.key.get_pressed()[32] or pygame.mouse.get_pressed()[0]: #SHOOT GUN
             PROJ.fill(white) #fill screen with floor color
             pygame.display.update()
@@ -333,27 +359,29 @@ def main():
                 del walldict[(tx,ty)]
         
         angle = viewangle - FOV/2
-        for projx in range(projwidth): #RAYCASTING STEP
+        for projx in range(projwidth):
             Wx,Wy,distW = raycast(Px, Py ,angle, projx)
             drawwall(Wx,Wy, distW, projx)
             angle += columnangle                                  
 
-#INITIAL CONDITIONS (parameter/window setup)
 clock = pygame.time.Clock()
-
-FPS = 64
-speed = 800/FPS #changes runspeed (here proportional to framerate)
+reboundcoeff = 0.05
+Nx,Ny = 600,480
+FPS = 60
+speed = 800/FPS
+playermass = 70
+max_speed = 2*speed
+dragcoeff = 0.01
 turnspeed = 8
 looksensitivity = 180/Nx #this is calibrated so one screen = 1 half turn 
 gridsize = 32
 FOV = 60 #degrees
-Nx,Ny = 600,480 #window size
 walldict, grid = gridmaker()  
 
 #derived parameters
 projwidth,projheight = Nx,Ny
 projdistance = (1/tan(radians(FOV/2))) * (projwidth/2) 
-columnangle = FOV/projwidth # angle between rays/columns (in degrees!)
+columnangle = FOV/projwidth #in degrees! # angle between rays/columns 
 
 # set up surfaces
 window = pygame.display.set_mode( (Nx,Ny) )
@@ -362,7 +390,4 @@ PROJ = pygame.Surface( (Nx,Ny))
 pygame.event.set_grab(True)
 pygame.mouse.set_visible(False)
 
-main() #run loop
-
-    
-    
+main()
